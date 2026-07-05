@@ -1,0 +1,11 @@
+To find information about which device a website must run on, we can look at the course content regarding responsiveness in web development.
+
+The relevant video for this topic is Video 1588: SEO and Core Web Vitals in HTML.
+
+Relevant timestamps:
+• 536.0 seconds (approximately 8 minutes and 56 seconds) - The importance of responsive design.
+• 562.0 seconds (approximately 9 minutes and 22 seconds) - How your website should run on all devices, including iPad, iPhone, Android, Surface Pro 4.
+
+In this section, the instructor explains how websites should be designed to work well across different screen sizes and devices, emphasizing that they must look good in all width devices. 
+
+I recommend starting with Video 1588 for a comprehensive overview of responsive web design and its importance.
