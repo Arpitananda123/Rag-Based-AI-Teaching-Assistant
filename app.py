@@ -10,6 +10,9 @@ import yt_dlp
 import streamlit as st
 from sklearn.metrics.pairwise import cosine_similarity
 import torch
+import base64
+from gtts import gTTS
+from audio_recorder_streamlit import audio_recorder
 
 # --- PAGE CONFIGURATION & INITIALIZATION ---
 st.set_page_config(page_title="Sigma AI Teaching Assistant", page_icon="🎓", layout="wide")
@@ -60,6 +63,66 @@ def inference(prompt_text):
         st.error(f"Failed to connect to local Llama endpoint: {e}")
         return {"response": "Inference connection error."}
 
+import os
+import whisper
+import torch
+
+def transcribe_voice_input(audio_bytes):
+    """
+    Saves the browser's recorded audio bytes to a temporary file,
+    runs it through the local Whisper model, and extracts the text.
+    """
+    # 1. Define the temporary file name
+    temp_audio_path = "temp_user_input.wav"
+    
+    # 2. Write the raw binary audio data from the browser into the file
+    with open(temp_audio_path, "wb") as f:
+        f.write(audio_bytes)
+        
+    # 3. Detect if an NVIDIA GPU is available to accelerate transcription
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    
+    # 4. Load the lightweight 'small' model from your dedicated directory
+    model = whisper.load_model("base.en", download_root="E:\\whisper_models", device=device)
+    
+    # 5. Run the transcription loop (forcing fp16=False keeps CPU execution safe if no GPU exists)
+    result = model.transcribe(
+        audio=temp_audio_path, # Set to "hi" if you want to speak in Hindi
+        fp16=False
+    )
+    
+    # 6. Clean up the text by removing trailing whitespace
+    clean_text = result["text"].strip()
+    print(f"🎤 Whisper Heard: {clean_text}")
+    return clean_text
+def text_to_speech_autoplay(text):
+    """
+    Converts text to an MP3 file using gTTS, encodes it to Base64,
+    and injects a hidden HTML audio element to trigger instant browser playback.
+    """
+    # 1. Generate the speech audio file from text
+    tts = gTTS(text=text, lang='en', slow=False)
+    
+    # 2. Save it locally as a temporary asset
+    temp_mp3_path = "temp_ai_response.mp3"
+    tts.save(temp_mp3_path)
+    
+    # 3. Read the file back as binary bytes
+    with open(temp_mp3_path, "rb") as f:
+        audio_bytes = f.read()
+        
+    # 4. Convert the binary bytes into a Base64 string so it can live inside HTML text
+    base64_audio = base64.b64encode(audio_bytes).decode()
+    
+    # 5. Construct the native HTML audio player with the autoplay attribute enabled
+    audio_html = f"""
+        <audio autoplay="true">
+        <source src="data:audio/mp3;base64,{base64_audio}" type="audio/mp3">
+        </audio>
+        """
+    
+    # 6. Inject the HTML safely into the Streamlit interface webpage context
+    st.markdown(audio_html, unsafe_allow_html=True)
 # --- SIDEBAR: DYNAMIC VIDEO ADDITION ---
 with st.sidebar:
     st.header("📚 Update Knowledge Base")
@@ -177,22 +240,43 @@ for message in st.session_state.messages:
 
 # Lock conversation UI execution strictly until context entries are ready inside the DataFrame
 if len(st.session_state.df) == 0:
-    st.info("Your knowledge base is currently empty. Please process a video in the sidebar menu to get started.")
+    st.info("Your knowledge base is empty. Please process a video to populate the vector matrix.")
 else:
-    if incoming_query := st.chat_input("Ask a question about the course material..."):
-        # Display explicit input immediately inside UI panel frame
+    # 1. Create a structural layout: small column for mic, large column space for clear UI flow
+    col1, col2 = st.columns([1, 10])
+    
+    with col1:
+        # Renders the microphone element. Clicking it activates recording; clicking again stops it.
+        audio_bytes = audio_recorder(text="", icon_size="2x", icon_name="microphone", key="mic_widget")
+    
+    # 2. Initialize an empty variable to hold the final question text
+    incoming_query = None
+    
+    # Scenario A: The user utilized the microphone widget
+    if audio_bytes:
+        with st.spinner("Processing voice input..."):
+            incoming_query = transcribe_voice_input(audio_bytes)
+    
+    # Scenario B: The user typed inside the standard chat bar input frame
+    text_input = st.chat_input("Ask a question about the course materials...")
+    if text_input:
+        incoming_query = text_input
+
+    # 3. RAG Pipeline Trigger (Runs only if a query was captured via voice OR text)
+    if incoming_query:
+        # Log the user's question into the historical visual state
         st.session_state.messages.append({"role": "user", "content": incoming_query})
         with st.chat_message("user"):
             st.markdown(incoming_query)
         
-        # 4. Processing Similarity Matching & Running Inference
+        # Open assistant response visual frame block
         with st.chat_message("assistant"):
             response_container = st.empty()
             
-            with st.spinner("Scanning transcript indices for relevant milestones..."):
+            with st.spinner("Searching transcripts for matching concepts..."):
+                # --- YOUR EXACT RETRIEVAL MATHEMATICS ---
                 question_embedding = create_embedding([incoming_query])[0]
                 
-                # Re-apply your precise np.vstack spatial indexing operations
                 similarities = cosine_similarity(
                     np.vstack(st.session_state.df['embedding'].values), 
                     [question_embedding]
@@ -202,9 +286,8 @@ else:
                 max_idx = similarities.argsort()[::-1][0:top_results]
                 new_df = st.session_state.df.iloc[max_idx]
                 
-                # Your precise prompt structure logic
-                prompt = f"""
-You are an AI Teaching Assistant for the Sigma Web Development Course.
+                # --- PROMPT TEMPLATE INJECTION & OLLAMA INFERENCE ---
+                prompt = f"""You are an AI Teaching Assistant for the Sigma Web Development Course.
 
 Your job is to help students find exactly where a topic is taught in the course videos.
 
@@ -212,7 +295,7 @@ Your job is to help students find exactly where a topic is taught in the course 
 COURSE CONTENT
 =========================
 
-{new_df[["title","number","start","end","text"]].to_json()}
+{new_df[["title", "number", "start", "end", "text"]].to_json()}
 
 =========================
 STUDENT QUESTION
@@ -258,9 +341,14 @@ I recommend watching Video 45 first and then Video 46 for advanced layouts.
 
 Now answer the student's question.
 """
-                # Fetch text response using your local Ollama payload maps
+                
+                # Run your local Llama 3.2 engine
                 inference_output = inference(prompt)
                 response_text = inference_output.get('response', 'Failed to generate response.')
                 
+                # 4. Display the text answer in the chat bubble
                 response_container.markdown(response_text)
                 st.session_state.messages.append({"role": "assistant", "content": response_text})
+                
+                # 5. Trigger the text-to-speech audio loop to read the answer out loud
+                text_to_speech_autoplay(response_text)
