@@ -1,0 +1,11 @@
+streamlit
+audio-recorder-streamlit
+gTTS
+yt-dlp
+openai-whisper
+pandas
+numpy
+scikit-learn
+requests
+joblib
+torch
