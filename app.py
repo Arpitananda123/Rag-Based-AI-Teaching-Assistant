@@ -218,6 +218,7 @@ with st.sidebar:
                             for i, chunk in enumerate(new_chunks):
                                 chunk['chunk_id'] = current_chunk_id
                                 chunk['embedding'] = embeddings[i]
+                                chunk['url'] = video_url
                                 current_chunk_id += 1
                                 my_dicts.append(chunk)
                             
@@ -349,6 +350,33 @@ Now answer the student's question.
                 # 4. Display the text answer in the chat bubble
                 response_container.markdown(response_text)
                 st.session_state.messages.append({"role": "assistant", "content": response_text})
+                # --- NEW: CLICKABLE TIMESTAMP NAVIGATION (FIXED) ---
+                st.write("---")
+                st.caption("🚀 **Jump directly to the relevant lecture moment:**")
+
+                # Grab ONLY the #1 most relevant chunk (the first row in the sorted dataframe)
+                top_chunk = new_df.iloc[0]
                 
+                start_seconds = int(top_chunk['start'])
+                minutes = start_seconds // 60
+                seconds = start_seconds % 60
+                timestamp_label = f"⏱️ Watch Video {top_chunk['number']} at {minutes:02d}:{seconds:02d}"
+                
+                # Extract the URL safely
+                base_url = top_chunk.get('url')
+                
+                # Check if it's an old video missing a URL (Pandas treats missing strings as float NaN)
+                if pd.isna(base_url) or not base_url or base_url == "https://www.youtube.com":
+                    st.info(f"💡 The link for Video {top_chunk['number']} isn't in the database yet. Delete 'embeddings.joblib' and re-process your links to enable clickable buttons!")
+                else:
+                    # Construct the deep link safely (handles both watch?v= and youtu.be/ formats)
+                    if "?" in base_url:
+                        target_link = f"{base_url}&t={start_seconds}s"
+                    else:
+                        target_link = f"{base_url}?t={start_seconds}s"
+                    
+                    # Render the single button
+                    st.link_button(label=timestamp_label, url=target_link)
                 # 5. Trigger the text-to-speech audio loop to read the answer out loud
                 text_to_speech_autoplay(response_text)
+               
