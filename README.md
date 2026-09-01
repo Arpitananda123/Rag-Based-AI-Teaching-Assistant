@@ -48,3 +48,33 @@ cd ai-teaching-assistant
 Install all required Python libraries using the `requirements.txt` file:
 ```bash
 pip install -r requirements.txt
+```
+
+###3. Pull Local Models (Ollama)
+Ensure Ollama is installed and running in your background terminal, then pull the required models for text generation and vector embeddings:
+```bash
+ollama pull llama3.2
+ollama pull bge-m3
+```
+###4. Run the Application
+Launch the Streamlit web interface:
+```bash
+streamlit run app.py
+```
+🎮 How to Use
+Open the web interface in your browser (usually http://localhost:8501).
+
+Open the Sidebar, paste a YouTube lecture URL, assign a video number and title, and click Process & Index Video.
+
+Wait for the success balloons indicating the audio has been extracted, transcribed, and added to your vector knowledge base.
+
+Ask a question using the Chat Box, or click the Microphone Icon to speak your question out loud.
+
+Listen to the AI's spoken response and click the generated Timestamp Button to open a new tab and jump straight to that exact moment in the source video!
+
+🔮 Future Enhancements
+Migration from Pandas/Joblib to a dedicated Vector DB (ChromaDB / FAISS) for massive scale.
+
+Integration of Groq Cloud API for instantaneous Whisper Large-V3 transcription in noisy environments.
+
+Multi-language support for broader educational access.
