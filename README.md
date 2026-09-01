@@ -42,3 +42,9 @@ An interactive, voice-first AI Teaching Assistant built with an end-to-end Retri
 ```bash
 git clone [https://github.com/yourusername/ai-teaching-assistant.git](https://github.com/yourusername/ai-teaching-assistant.git)
 cd ai-teaching-assistant
+```
+
+### 2. Install Dependencies
+Install all required Python libraries using the `requirements.txt` file:
+```bash
+pip install -r requirements.txt
