@@ -61,7 +61,7 @@ Launch the Streamlit web interface:
 ```bash
 streamlit run app.py
 ```
-🎮 How to Use
+##🎮 How to Use
 Open the web interface in your browser (usually http://localhost:8501).
 
 Open the Sidebar, paste a YouTube lecture URL, assign a video number and title, and click Process & Index Video.
@@ -72,7 +72,7 @@ Ask a question using the Chat Box, or click the Microphone Icon to speak your qu
 
 Listen to the AI's spoken response and click the generated Timestamp Button to open a new tab and jump straight to that exact moment in the source video!
 
-🔮 Future Enhancements
+##🔮 Future Enhancements
 Migration from Pandas/Joblib to a dedicated Vector DB (ChromaDB / FAISS) for massive scale.
 
 Integration of Groq Cloud API for instantaneous Whisper Large-V3 transcription in noisy environments.
